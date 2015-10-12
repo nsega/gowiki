@@ -27,7 +27,6 @@ func loadPage(title string) (*Page, error) {
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
-	title, err := getTitle(w, r)
 	if err != nil {
 		return
 	}
@@ -40,7 +39,6 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func editHandler(w http.ResponseWriter, r *http.Request) {
-	title, err := getTitle(w, r)
 	if err != nil {
 		return
 	}
@@ -52,7 +50,6 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func saveHandler(w http.ResponseWriter, r *http.Request) {
-	title, err := getTitle(w, r)
 	if err != nil {
 		return
 	}
@@ -75,20 +72,32 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	}
 }
 
+//func getTitle(w http.ResponseWriter, r *http.Request) (string, error) {
+//	m := validPath.FindStringSubmatch(r.URL.Path)
+//	if m == nil {
+//		http.NotFound(w, r)
+//		return "", errors.New("Invalid Page Title")
+//	}
+//	return m[2], nil
+//}
+
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 
-func getTitle(w http.ResponseWriter, r *http.Request) (string, error) {
-	m := validPath.FindStringSubmatch(r.URL.Path)
-	if m == nil {
-		http.NotFound(w, r)
-		return "", errors.New("Invalid Page Title")
+func makeHandler(fn func(http.ResponseWirter, *http.Request, string)) http.HandlerFunc {
+	return func(w http.ResponseWirter, r *http.Request) {
+		m := validPath.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+			http.NotFound(w, r)
+			return
+		}
+		fn(w, r, m[2])
 	}
-	return m[2], nil
 }
 
 func main() {
-	http.HandleFunc("/view/", viewHandler)
-	http.HandleFunc("/edit/", editHandler)
-	http.HandleFunc("/save/", saveHandler)
+	http.HandleFunc("/view/", makeHandler(viewHandler))
+	http.HandleFunc("/edit/", makeHandler(editHandler))
+	http.HandleFunc("/save/", makeHandler(saveHandler))
+
 	http.ListenAndServe(":8080", nil)
 }
